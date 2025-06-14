@@ -1,4 +1,4 @@
-# Hisho Cross-Chain Rebase Token
+# Hisho Randomize Yielding Protocol
 
 
 1. Hisho Protocol enables users to deposit into the vault and in return receive rebase tokens.
