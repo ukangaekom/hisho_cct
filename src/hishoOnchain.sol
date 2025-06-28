@@ -245,6 +245,12 @@ contract HishoOnchain {
         return closedStakeOrders[_user];
     }
 
+    function getVaultBalance(address _tokenAddress) public view returns (uint256){
+        IERC20 token = IERC20(_tokenAddress);
+
+        return token.balanceOf(address(this));
+    }
+
 
 
     //SETTER FUNCTIONS 

@@ -59,6 +59,8 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 
 
+**Hisho DeFi Contract:**`0x14DfF3DC551bBe68e1089F3419eFc9be7b19C7A2`
+
 
 
 
