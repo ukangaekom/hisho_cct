@@ -2,11 +2,18 @@
 
 pragma solidity ^0.8.25;
 
-
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {HishoInterestAutomation} from "./hishoCrossChain.sol";
-import {MyToken as Hisho} from "./CCIP/hishoCCT.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+
+
+// Interface
+
+interface IHishoGamifiedInterest {
+    function get_interest() external view returns (uint256);
+}
+
+
 
 
 
@@ -18,8 +25,13 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 * @notice The daily interest rate is called by Chainlink Automation
 */
 
-contract HishoOnchain is Ownable{
+contract HishoOnchain {
 
+    using SafeERC20 for IERC20;
+    
+
+    IHishoGamifiedInterest public hishoAutoInterest;
+    AggregatorV3Interface internal nativeAssetDataFeed;
     
     // Errors
     error HishoOnchain_maxStringLengthExceeded();
@@ -42,9 +54,9 @@ contract HishoOnchain is Ownable{
         uint256 start_time;
         uint256 end_time;
         uint256 assetAmount;
-        uint8 assetRewardRate;
+        uint256 assetRewardRate;
         uint256 hisho_reward;
-        address tokenAddress
+        address tokenAddress;
         bool claimed;
     }
 
@@ -52,15 +64,19 @@ contract HishoOnchain is Ownable{
 
     // VARIABLES
 
+    IERC20 private HishoToken;
+
     uint256 private counter_id = 0;
-    address public hisho_token_address; //For any of the supported blockchains. E.g Avalanche
+    address internal hisho_token_address; //For any of the supported blockchains. E.g Avalanche
     
 
     /*
     * @note The monthly reward rate ranges from to 1% to 10%
     * @note The value of the dailyReward ranges from 10 to 100 in number so it is basically maxed at 1000 which is 100%
     */ 
-    uint8 private dailyRewardRate = 0;
+    uint256 public dailyRewardRate = 0;
+
+    address private owner;
 
     // MAPPINGS
 
@@ -72,31 +88,39 @@ contract HishoOnchain is Ownable{
     mapping(address user => uint256[] order_ids) public closedStakeOrders;
 
 
-    mapping(address user => uint256 balance) private HishoBalance;
-
     // Token Balances
     mapping(address user => mapping(address token => uint256 amount)) private WithdrawableAsset;
-    
-
     // Locked Balances
     mapping(address user => mapping(address token => uint256 amount)) private LockedAsset;
+
+    mapping(address => uint256) public withdrawableBalances;
+    mapping(address => uint256) public lockedBalances;
+
    
     // Social Media
-    mapping(address user =>bytes) public Telegram; //Registering telegram username
-    mapping(bytes user =>address) public TelegramReverse; //Registering telegram username
-    mapping(address user =>bytes) public X_app; //Registering twitter username
-    mapping(bytes user =>address) public X_appReverse; //Registering twitter username
-    mapping(address user =>bytes) public Email; //Register with email
-    mapping(bytes user =>address) public EmailReverse; //Register with email
+    mapping(address user =>bytes32) public Telegram; //Registering telegram username
+    mapping(bytes32 user =>address) public TelegramReverse; //Registering telegram username
+    mapping(address user =>bytes32) public X_app; //Registering twitter username
+    mapping(bytes32 user =>address) public X_appReverse; //Registering twitter username
+    mapping(address user =>bytes32) public Email; //Register with email
+    mapping(bytes32 user =>address) public EmailReverse; //Register with email
 
     mapping(address=> bool) private AuthorizedCaller; //Authorized Caller Address
 
+
+    // EVENTS
+    event Deposited(address indexed sender, uint256 amount);
+    event Withdrawn(address indexed receiver, uint256 amount);
+    event AssetRedrawn(address indexed receiver, address assetAddress, uint256 amount);
     
 
     // @param address _hishoToken -> This is the ERC\ 
-    constructor(address _hishoToken){
-
+    constructor(address _nativeTokenAddress, address _hishoToken){
+        nativeAssetDataFeed = AggregatorV3Interface(_nativeTokenAddress);
+        owner = msg.sender;
         hisho_token_address = _hishoToken;
+        HishoToken = IERC20(_hishoToken);
+
 
     }
 
@@ -104,18 +128,17 @@ contract HishoOnchain is Ownable{
 
     // MODIFIERS
 
+    modifier onlyOwner(){
+        require(msg.sender == owner, "Not the owner");
+        _;
+    }
+
     modifier onlyAuthorized(){
         require(AuthorizedCaller[msg.sender] == true, "You are not authorized to call this function");
         _;
     }
 
 
-
-    // CONSTRUCTOR
-
-    constructor() {
-
-    }
 
 
 
@@ -139,11 +162,9 @@ contract HishoOnchain is Ownable{
 
 
 
-    
-
     // REGISTER FUNCTIONS
-    functions registerTelegramUsername(string memory _telegramUserName) public{
-        bytes user = stringToBytes(_telegramUserName);
+    function registerTelegramUsername(string memory _telegramUserName) public {
+        bytes32 user = stringToBytes(_telegramUserName);
         require(Telegram[msg.sender] == bytes32(0) || TelegramReverse[user] == address(0),"Username Unavailable");
         Telegram[msg.sender] = user;
         TelegramReverse[user] = msg.sender;
@@ -152,7 +173,7 @@ contract HishoOnchain is Ownable{
     }
 
     function registerXUsername(string memory _xUserName) public{
-        bytes user = stringToBytes(_telegramUserName);
+        bytes32 user = stringToBytes(_xUserName);
         require(X_app[msg.sender] == bytes32(0) || X_appReverse[user] == address(0),"Username Unavailable");
         X_app[msg.sender] = user;
         X_appReverse[user] = msg.sender;
@@ -162,7 +183,7 @@ contract HishoOnchain is Ownable{
 
 
     function registerEmailUsername(string memory _emailUserName) public{
-        bytes user = stringToBytes(_telegramUserName);
+        bytes32 user = stringToBytes(_emailUserName);
         require(Email[msg.sender] == bytes32(0) || EmailReverse[user] == address(0),"Username Unavailable");
         Email[msg.sender] = user;
         EmailReverse[user] = msg.sender;
@@ -181,8 +202,8 @@ contract HishoOnchain is Ownable{
     }
 
 
-    function getXName(address _user) public view returns returns(bytes32) {
-        return X_app[user];
+    function getXName(address _user) public view returns (bytes32) {
+        return X_app[_user];
 
     }
 
@@ -197,42 +218,33 @@ contract HishoOnchain is Ownable{
         return stakedOrderDetail[_orderId].hisho_reward;
     }
 
-
     function getDailyRewardRate() public view returns (uint256) {
         return dailyRewardRate;
     }
     
     function getWithdrawableAsset(address _user, address _tokenAddress) public view returns (uint256) {
-
         return WithdrawableAsset[_user][_tokenAddress];
-
     }
 
-   
     function getLockedAsset(address _user, address _tokenAddress) public view returns (uint256) {
-
         return LockedAsset[_user][_tokenAddress];
-
     }
 
 
     // Get Order Functions
 
     function getStakedOrderDetail(uint256 _id) public view returns (Stake memory) {
-
         return stakedOrderDetail[_id];
-
     }
 
-    function getAllOpenedStakeOrder(address _user) public view returns(uint256[]){
+    function getAllOpenedStakeOrder(address _user) public view returns(uint256[] memory){
         return openedStakeOrders[_user];
     }
 
-    function getAllClosedStakeOrder(address _user) public view returns (uint256[]) {
-
-        return closedStakeOrders[_user]
-
+    function getAllClosedStakeOrder(address _user) public view returns (uint256[] memory) {
+        return closedStakeOrders[_user];
     }
+
 
 
     //SETTER FUNCTIONS 
@@ -245,13 +257,15 @@ contract HishoOnchain is Ownable{
     * @notice Chainlink VRF is also called in the function set the random daily interest
     */
     function setDailyRewardRate(uint8 _dailyRate) public onlyAuthorized{
-        if(_dailyRate > 10 && _daily < 100){
+        if(_dailyRate > 10 && _dailyRate < 100){
 
             dailyRewardRate = _dailyRate;
-        }
-        
-        
+        }   
 
+    }
+
+    function setAutomatedCaller(address _hishoAddress) public onlyOwner{
+        hishoAutoInterest = IHishoGamifiedInterest(_hishoAddress);
     }
 
 
@@ -259,106 +273,76 @@ contract HishoOnchain is Ownable{
     // CLAIM FUNCTIONS
 
     function claimReward(uint256 _id) public {
-
+         Stake storage order = stakedOrderDetail[_id];
         // Check if it is the owner of the staked order
-        require(stakedOrderDetail[_id].staker == msg.sender, "You are not the owner");
+        require(order.staker == msg.sender, "You are not the owner");
         // Check if the stake order is already claimed
-        require(stakedOrderDetail[_id].claimed == true, "Order already claimed");
+         require(order.claimed == true, "Order already claimed");
         // Check if staking is due
-        require(block.timestamp >= stakedOrderDetail[_id].end_time,"Not due")
+        require(block.timestamp >= order.end_time,"Not due");
 
         
         // Change state to claimed
-        stakedOrderDetail[_id].claimed = true;
+        order.claimed = true;
+
+        // Declare Tempoary variables
+        address staker = order.staker;
+        address token = order.tokenAddress;
+        uint256 amount = order.assetAmount;
+        uint256 reward = order.hisho_reward;
         // Unlock the Staked Asset
+        LockedAsset[staker][token] -= amount;
 
-        // 
-        
-        // Mint The Required Hisho Tokens to the staker address
+        WithdrawableAsset[staker][token] += amount;
 
-        Hisho(hisho_token_address).mint(stakedOrderDetail[_id].staker,
-         stakedOrderDetail[_id].hisho_reward);
+        // Transfer The Required Hisho Tokens to the staker address
 
-        
+        HishoToken.safeTransferFrom(address(this),staker, reward);
 
     }
 
-    function claimRewardX(uint256 _id, string memory _x_username) public onlyAuthorized{
 
+    function claim_media(address _user, uint256 _id) public onlyAuthorized{
+         Stake storage order = stakedOrderDetail[_id];
         // Check if it is the owner of the staked order
-        require(stakedOrderDetail[_id].staker == X_app[stringToBytes(_x_username)], "You are not the owner");
-        // Check if the stake order is already claimed
-        require(stakedOrderDetail[_id].claimed == true, "Order already claimed");
+        require(order.staker == _user, "You are not the owner");
+        require(order.claimed == true, "Order already claimed");
         // Check if staking is due
-        require(block.timestamp >= stakedOrderDetail[_id].end_time,"Not due")
+        require(block.timestamp >= order.end_time,"Not due");
 
         
         // Change state to claimed
-        stakedOrderDetail[_id].claimed = true;
+        order.claimed = true;
+
+        // Declare Tempoary variables
+        address staker = order.staker;
+        address token = order.tokenAddress;
+        uint256 amount = order.assetAmount;
+        uint256 reward = order.hisho_reward;
         // Unlock the Staked Asset
+        LockedAsset[staker][token] -= amount;
 
-        // 
+        WithdrawableAsset[staker][token] += amount;
         
-        // Mint The Required Hisho Tokens to the staker address
+        // Transfer The Required Hisho Tokens to the staker address
 
-        Hisho(hisho_token_address).mint(stakedOrderDetail[_id].staker, stakedOrderDetail[_id].hisho_reward);
-    }
-
-    function claimRewardTelegram(uint256 _id, string memory _telegram_username) public onlyAuthorized{
-
-        // Check if it is the owner of the staked order
-        require(stakedOrderDetail[_id].staker == Telegram[stringToBytes(_telegram_username)], "You are not the owner");
-        // Check if the stake order is already claimed
-        require(stakedOrderDetail[_id].claimed == true, "Order already claimed");
-        // Check if staking is due
-        require(block.timestamp >= stakedOrderDetail[_id].end_time,"Not due")
-
-        
-        // Change state to claimed
-        stakedOrderDetail[_id].claimed = true;
-        // Unlock the Staked Asset
-
-        // 
-        
-        // Mint The Required Hisho Tokens to the staker addres
-        Hisho(hisho_token_address).mint(stakedOrderDetail[_id].staker, stakedOrderDetail[_id].hisho_reward);
-    }
-
-
-
-    function claimRewardEmail(uint256 _id, string memory _email_username) public onlyAuthorized{
-
-        // Check if it is the owner of the staked order
-        require(stakedOrderDetail[_id].staker == Telegram[stringToBytes(_email_username)], "You are not the owner");
-        // Check if the stake order is already claimed
-        require(stakedOrderDetail[_id].claimed == true, "Order already claimed");
-        // Check if staking is due
-        require(block.timestamp >= stakedOrderDetail[_id].end_time,"Not due")
-
-        
-        // Change state to claimed
-        stakedOrderDetail[_id].claimed = true;
-        // Unlock the Staked Asset
-
-        // 
-        
-        // Mint The Required Hisho Tokens to the staker addres
-        Hisho(hisho_token_address).mint(stakedOrderDetail[_id].staker, stakedOrderDetail[_id].hisho_reward);
+        HishoToken.safeTransferFrom(address(this),staker, reward);
 
     }
 
 
     //  STAKE RELATED FUNCTIONS
 
-    function stake(address _tokenAddress, uint256 _amount) public onlyAuthorized{
-        require(priceFeed[_tokenAddress], "Token not Supported");
-
+    function stake(address _tokenAddress, uint256 _amount) public {
+        require(priceFeed[_tokenAddress] != address(0), "Token not Supported");
+        require(WithdrawableAsset[msg.sender][_tokenAddress] > _amount,"Insufficient Funds");
         //  Lock the Asset Staked;
+        WithdrawableAsset[msg.sender][_tokenAddress] -= _amount;
+        LockedAsset[msg.sender][_tokenAddress] += _amount;
 
-
-        uint256 hisho_reward = getReward(_tokenAddress,_amount);
+        uint256 reward = getReward(_tokenAddress,_amount);
         
-        Stake memory stake_order = new Stake({
+        Stake memory stake_order = Stake({
             staker:msg.sender,
             id: counter_id,
             start_time: block.timestamp,
@@ -372,25 +356,25 @@ contract HishoOnchain is Ownable{
 
         stakedOrderDetail[counter_id] = stake_order;    
 
-        openedStakeOrders[msg.sender].
+        openedStakeOrders[msg.sender].push(counter_id);
 
-        counter_id += 1
+        counter_id += 1;
 
     }
 
-    function stakeOnX(address _tokenAddress, uint256 _amount) public onlyAuthorized{
-        // Get the username, decrypt and check if he is registered
-
-        // Lock the Asset Staked
-
-
-        // Check if Token is supported
-        require(priceFeed[_tokenAddress], "Token not Supported");
+    function stake_media(address _user, address _tokenAddress, uint256 _amount) public onlyAuthorized{
         
-        uint256 hisho_reward = getReward(_tokenAddress,_amount);
+        // Check if Token is supported
+        require(priceFeed[_tokenAddress] != address(0), "Token not Supported");
+        require(WithdrawableAsset[_user][_tokenAddress] > _amount,"Insufficient Funds");
+         // Lock the Asset Staked
+        WithdrawableAsset[_user][_tokenAddress] -= _amount;
+        LockedAsset[_user][_tokenAddress] += _amount;
+        
+        uint256 reward = getReward(_tokenAddress,_amount);
 
-        Stake memory stake_order = new Stake({
-            staker://enter the alias X address,
+        Stake memory stake_order = Stake({
+            staker:_user,
             id: counter_id,
             start_time: block.timestamp,
             end_time: (block.timestamp + 7 days),
@@ -403,64 +387,98 @@ contract HishoOnchain is Ownable{
 
         stakedOrderDetail[counter_id] = stake_order;    
 
-        openedStakeOrders[msg.sender].
+        openedStakeOrders[msg.sender].push(counter_id);
 
-        counter_id += 1
-
-
+        counter_id += 1;
 
     }
-    function stakeonTelegram(address _tokenAddress, uint256 _amount) public onlyAuthorized{
-        // Get the username, decrypt and check if he is registered
-        // Check if Token is supported
-        require(priceFeed[_tokenAddress], "Token not Supported");
+
+    
+    /*
+    * I know this isn't suppose to be here. This is testnet
+    * This is the safe button for withdrawing assets incase something goes wrong.
+    * It's for testing purposes
+    */
 
 
+    function withdrawAsset(address _asset) public onlyOwner{
+        uint256 totalAmount = IERC20(_asset).balanceOf(address(this));
+
+        IERC20(_asset).safeTransferFrom(address(this), msg.sender, totalAmount);
+        emit AssetRedrawn(msg.sender, _asset, totalAmount);
+
+    }
+
+    function withdraw() public onlyOwner{
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No ETH available");
         
-        // Lock the Asset Staked
+        (bool success, ) = (msg.sender).call{value: balance}("");
+        require(success, "Transfer failed");
+        emit Withdrawn(msg.sender, balance);
+    }
 
+    function buy_hisho(uint256 _amount) public {
+        require(withdrawableBalances[msg.sender] > _amount, "Insufficient Balance");
+        withdrawableBalances[msg.sender] -= _amount;
 
-
-        uint256 hisho_reward = getReward(_tokenAddress,_amount);
-
-         Stake memory stake_order = new Stake({
-            staker://enter the alias Telegram address,
-            id: counter_id,
-            start_time: block.timestamp,
-            end_time: (block.timestamp + 7 days),
-            assetAmount: _amount,
-            assetRewardRate: dailyRewardRate,
-            hisho_reward: reward,
-            tokenAddress:_tokenAddress,
-            claimed:false
-        });
-
-        stakedOrderDetail[counter_id] = stake_order;    
-
-        openedStakeOrders[msg.sender].
-
-        counter_id += 1
+        // prettier-ignore
+        (
+            /* uint80 roundId */,
+            int256 answer,
+            /*uint256 startedAt*/,
+            /*uint256 updatedAt*/,
+            /*uint80 answeredInRound*/
+        ) = nativeAssetDataFeed.latestRoundData();
+        uint256 hisho_amount = (uint256(answer) * _amount / 1e8);
+        HishoToken.safeTransferFrom(address(this),msg.sender,hisho_amount);
+        
 
     }
 
-    
+    function buy_hisho_media(address _user, uint256 _amount) public onlyAuthorized{
+        require(withdrawableBalances[_user] > _amount, "Insufficient Balance");
+        withdrawableBalances[_user] -= _amount;
+        
+        // prettier-ignore
+        (
+            /* uint80 roundId */,
+            int256 answer,
+            /*uint256 startedAt*/,
+            /*uint256 updatedAt*/,
+            /*uint80 answeredInRound*/
+        ) = nativeAssetDataFeed.latestRoundData();
+        uint256 hisho_amount = (uint256(answer) * _amount / 1e8);
+        HishoToken.safeTransferFrom(address(this),_user,hisho_amount);
 
-
-    function unstake() public onlyAuthorized{
 
     }
 
-    
+    function lend(uint256 _amount) public { 
+        require(withdrawableBalances[msg.sender] > _amount, "Insufficient Balance");
+        withdrawableBalances[msg.sender] -= _amount;
+        lockedBalances[msg.sender] += _amount;
 
+        HishoToken.safeTransferFrom(address(this),msg.sender,_amount);
+    }
+    
+    function lend_hisho_media(address _user, uint256 _amount) public onlyAuthorized{ 
+        require(withdrawableBalances[_user] > _amount, "Insufficient Balance");
+        withdrawableBalances[_user] -= _amount;
+        lockedBalances[_user] += _amount;
+
+        HishoToken.safeTransferFrom(address(this),_user,_amount);
+    }
+
+    
+    function updateDailyRewardRate() public onlyAuthorized{
+        dailyRewardRate = hishoAutoInterest.get_interest();
+    }
 
 
     // UTITLITY FUNCTIONS 
 
-    function deleteClosedStakeOrders() {
-
-    }
-
-    function getReward(address _tokenAddress, uint256 _amount) public view returns (int) {
+    function getReward(address _tokenAddress, uint256 _amount) public view returns (uint256) {
         // prettier-ignore
         (
             /* uint80 roundId */,
@@ -469,7 +487,7 @@ contract HishoOnchain is Ownable{
             /*uint256 updatedAt*/,
             /*uint80 answeredInRound*/
         ) = AggregatorV3Interface(priceFeed[_tokenAddress]).latestRoundData();
-        return (answer * _amount * dailyRewardRate)/(1e11);
+        return (uint256(answer) * _amount * dailyRewardRate)/(1e11);
     }
 
     function stringToBytes(string memory _username) internal pure returns(bytes32 result){
@@ -477,14 +495,29 @@ contract HishoOnchain is Ownable{
 
         require(temp.length <= 32, "Too long");
         assembly {
-            result := mload(add(username, 32))
+            result := mload(add(_username, 32))
 
 
         }
 
     }
 
+    receive() external payable {
+        _handleDeposit();
+    }
 
+    fallback() external payable {
+        _handleDeposit();
+    }
+
+    function _handleDeposit() private {
+        require(msg.value > 0, "Amount must be > 0");
+        withdrawableBalances[msg.sender] += msg.value;
+        emit Deposited(msg.sender, msg.value);
+    }
+
+
+    
 
 
 
