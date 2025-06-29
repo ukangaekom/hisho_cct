@@ -59,9 +59,9 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 **ERC20 Cross Chain Token Address**
 
-**Avalanche Fuji:** `0x1c62f73e1c24c29254f3954aca1f9a7aaacb45b5`
+**Avalanche Fuji:** [`0x1c62f73e1c24c29254f3954aca1f9a7aaacb45b5`](https://testnet.snowtrace.io/address/0x1c62f73e1c24c29254f3954aca1f9a7aaacb45b5)
 
-**Scroll Sepolia:** `0xc6fc21d2511a70d56291c986dcce47380161f698`
+**Scroll Sepolia:** [`0xc6fc21d2511a70d56291c986dcce47380161f698`](https://sepolia.scrollscan.com/address/0xc6fc21d2511a70d56291c986dcce47380161f698)
 
 **ERC721 Dynamic Agentic NFT Address:**
 
