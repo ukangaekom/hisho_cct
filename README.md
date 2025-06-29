@@ -59,7 +59,7 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 **ERC721 Dynamic Agentic NFT Address:**
 
-**Avalanche Fuji:** `5711a6828bc9434cb323f84baa951a87`
+**Avalanche Fuji:** `0x0FBbDfCCfC74682134BF584c46C1f4E2C715Ce4c`
 
 **Opensea**: [Hisho Genesis Avalanche NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/0)
 **Opensea**: [Upgradable Avalanche NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/1)
