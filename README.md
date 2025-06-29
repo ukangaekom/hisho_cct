@@ -52,10 +52,29 @@ It's simple. We provide your customized an tailored agent through an api while y
 **Token Decimal:** **`e18`**
 
 **ERC20 Cross Chain Token Address**
+
 **Avalanche Fuji:** `0x1c62f73e1c24c29254f3954aca1f9a7aaacb45b5`
+
 **Scroll Sepolia:** `0xc6fc21d2511a70d56291c986dcce47380161f698`
 
-**NFT**
+**ERC721 Dynamic Agentic NFT Address:**
+
+**Avalanche Fuji:** `5711a6828bc9434cb323f84baa951a87`
+
+**Opensea**: [Hisho Genesis Avalanche NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/0)
+**Opensea**: [Upgradable Avalanche NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/1)
+
+
+**Scroll Sepolia:** `0x0D3A323B40B9b62e25FACb495FEDE396d84C61Ed`
+
+[Scroll Testnet Scan](https://sepolia.scrollscan.com/address/0x0d3a323b40b9b62e25facb495fede396d84c61ed)
+
+**Opensea**: 
+
+[Hisho Genesis Scroll NFT](https://sepolia.scrollscan.com/nft/0x0d3a323b40b9b62e25facb495fede396d84c61ed/0)
+
+[Hisho Genesis Scroll NFT](https://sepolia.scrollscan.com/nft/0x0d3a323b40b9b62e25facb495fede396d84c61ed/1)
+
 
 
 
