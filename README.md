@@ -91,6 +91,11 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 
 
+# Chainlink Service Subscriptions
+
+**VRF**: [Hisho Automation Interest Contract VRF Subscription](https://vrf.chain.link/fuji#/side-drawer/subscription/fuji/33973673007361492444179581756780378375317520279061855542086790202950903222662)
+
+**Automation**:[Hisho Automation Interest Contract Automation Subscription](https://automation.chain.link/fuji/27572808074052681613616845511413181415199168609014367088907226484068358348631)
 
 
 
@@ -99,14 +104,7 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 
 
-
-
-
-
-
-
-
-### Installing Openzeppelin
+### Installing Dependencies for Testing
 ```
 forge install openzeppelin/openzeppelin-contracts@v5.1.0 --no-commit
 ```
