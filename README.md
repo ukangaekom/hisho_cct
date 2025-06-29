@@ -48,6 +48,12 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 **Contract Address:** `0xba87dD154BC7132A89B4b6632404f819799d997b`
 
+**VRF and Automation Contract:**
+**`Automation/hishoInterestAutomation.sol`**
+**Contract Address on Fuji_Testnet**:`0xDe74fB2a3B571dAEf0C4786AD294b0F51A03051a`
+
+
+
 **Token: HISHO**
 **Token Decimal:** **`e18`**
 
@@ -62,7 +68,7 @@ It's simple. We provide your customized an tailored agent through an api while y
 **Avalanche Fuji:** `0x0FBbDfCCfC74682134BF584c46C1f4E2C715Ce4c`
 
 **Opensea**: [Hisho Genesis Avalanche NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/0)
-**Opensea**: [Upgradable Avalanche NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/1)
+**Opensea**: [Dynamic Agentic NFT](https://testnets.opensea.io/assets/avalanche_fuji/0x0fbbdfccfc74682134bf584c46c1f4e2c715ce4c/1)
 
 
 **Scroll Sepolia:** `0x0D3A323B40B9b62e25FACb495FEDE396d84C61Ed`
@@ -73,12 +79,15 @@ It's simple. We provide your customized an tailored agent through an api while y
 
 [Hisho Genesis Scroll NFT](https://sepolia.scrollscan.com/nft/0x0d3a323b40b9b62e25facb495fede396d84c61ed/0)
 
-[Hisho Genesis Scroll NFT](https://sepolia.scrollscan.com/nft/0x0d3a323b40b9b62e25facb495fede396d84c61ed/1)
+[Dynamic Agentic NFT](https://sepolia.scrollscan.com/nft/0x0d3a323b40b9b62e25facb495fede396d84c61ed/1)
 
 
 
 
-**Hisho DeFi Contract:**`0x14DfF3DC551bBe68e1089F3419eFc9be7b19C7A2`
+## MAIN Defi Contract
+
+**src/hishoOnchain.sol**
+**Avalanche_Fuji_Testnet(Hisho DeFi Contract):**`0x14DfF3DC551bBe68e1089F3419eFc9be7b19C7A2`
 
 
 
